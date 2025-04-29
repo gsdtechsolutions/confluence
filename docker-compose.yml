@@ -17,6 +17,17 @@ services:
     restart: always
     networks:
       - network-bridge
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.http-confluence.entryPoints=http
+      - traefik.http.routers.http-confluence.rule=Host(`confluence.gsdtech.solutions`)
+      - traefik.http.routers.http-confluence.middlewares=redirect-to-https
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+      - traefik.http.routers.https-confluence.entryPoints=https
+      - traefik.http.routers.https-confluence.rule=Host(`confluence.gsdtech.solutions`)
+      - traefik.http.routers.https-confluence.tls=true
+      - traefik.http.services.confluence.loadbalancer.server.port=8090
+
 
   mysql:
     image: mysql:8.0
