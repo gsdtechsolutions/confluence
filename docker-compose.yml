@@ -19,15 +19,10 @@ services:
       - network-bridge
     labels:
       - traefik.enable=true
-      - traefik.http.routers.http-confluence.entryPoints=http
-      - traefik.http.routers.http-confluence.rule=Host(`confluence.gsdtech.solutions`)
-      - traefik.http.routers.http-confluence.middlewares=redirect-to-https
-      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
-      - traefik.http.routers.https-confluence.entryPoints=https
-      - traefik.http.routers.https-confluence.rule=Host(`confluence.gsdtech.solutions`)
-      - traefik.http.routers.https-confluence.tls=true
+      - traefik.http.routers.confluence.entryPoints=web
+      - traefik.http.middlewares.confluence-headers.headers.customrequestheaders.X-Forwarded-Proto=https
+      - traefik.http.routers.confluence.middlewares=confluence-headers
       - traefik.http.services.confluence.loadbalancer.server.port=8090
-
   mysql:
     image: mysql:8.0
     container_name: mysql-confluence
