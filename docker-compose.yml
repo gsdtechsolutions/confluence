@@ -5,24 +5,22 @@ services:
     image: haxqer/confluence:9.2.1
     container_name: confluence-srv
     environment:
-      - TZ=America/Denver
-      # Uncomment and adjust JVM options as needed
-      # - JVM_MINIMUM_MEMORY=1g
-      # - JVM_MAXIMUM_MEMORY=12g
-      # - JVM_CODE_CACHE_ARGS='-XX:InitialCodeCacheSize=1g -XX:ReservedCodeCacheSize=8g'
+      - TZ=UTC
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     volumes:
-      - home_data:/var/confluence
-    restart: always
+      - confluence_data:/var/confluence
+      - ./mysql-connector-java-8.0.30.jar:/opt/atlassian/confluence/confluence/WEB-INF/lib/mysql-connector-java-8.0.30.jar
+    restart: unless-stopped
     networks:
       - network-bridge
     labels:
       - traefik.enable=true
       - traefik.http.routers.confluence.entryPoints=web
-      - traefik.http.middlewares.confluence-headers.headers.customrequestheaders.X-Forwarded-Proto=https
-      - traefik.http.routers.confluence.middlewares=confluence-headers
+      - traefik.http.routers.confluence.rule=Host(`confluence.gsdtech.solutions`)
       - traefik.http.services.confluence.loadbalancer.server.port=8090
+
   mysql:
     image: mysql:8.0
     container_name: mysql-confluence
@@ -37,13 +35,20 @@ services:
       '--character-set-server=utf8mb4',
       '--collation-server=utf8mb4_bin',
       '--transaction-isolation=READ-COMMITTED',
+      '--default-time-zone=+00:00',
       '--innodb_log_file_size=256M',
       '--max_allowed_packet=256M',
       '--log_bin_trust_function_creators=1'
     ]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$${MYSQL_USER}", "-p$${MYSQL_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     volumes:
       - mysql_data:/var/lib/mysql
-    restart: always
+      - mysql_tz:/usr/share/zoneinfo
+    restart: unless-stopped
     networks:
       - network-bridge
 
@@ -52,7 +57,23 @@ networks:
     driver: bridge
 
 volumes:
-  home_data:
-    external: false
+  confluence_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/confluence/data
+
   mysql_data:
-    external: false
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/mysql/data
+
+  mysql_tz:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /usr/share/zoneinfo
